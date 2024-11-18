@@ -1,6 +1,10 @@
+use wgpu::{VertexState, FragmentState, PipelineLayoutDescriptor, RenderPipeline, RenderPipelineDescriptor, ShaderModuleDescriptor, ShaderSource, MultisampleState};
+use wgpu::PolygonMode::Fill;
 use winit::event::WindowEvent;
 use winit::keyboard::KeyCode;
 use winit::window::Window;
+use log;
+use log::{debug, info};
 
 pub mod run;
 
@@ -12,10 +16,12 @@ struct State<'a> {
     size: winit::dpi::PhysicalSize<u32>,
     clear_color: wgpu::Color,
     window: &'a Window,
+    render_pipeline: RenderPipeline,
 }
 
 impl<'a> State<'a> {
     async fn new(window: &'a Window) -> State<'a> {
+        debug!("State::new() has been called to initialise renderer");
         let size = window.inner_size();
 
         // Creating instance by setting the backend to primary (for linux, vulkan etc)
@@ -23,9 +29,11 @@ impl<'a> State<'a> {
             backends: wgpu::Backends::PRIMARY,
             ..Default::default()
         });
+        debug!("Instance has been initialised to primary backend");
 
         // Creating surface by referencing the window
         let surface = instance.create_surface(window).unwrap();
+        debug!("Surface has been created");
 
         // Handle for graphics card
         let adapter = instance.request_adapter(
@@ -35,6 +43,7 @@ impl<'a> State<'a> {
                 force_fallback_adapter: false,
             },
         ).await.unwrap();
+        debug!("Adapter has been created");
 
         let (device, queue) = adapter.request_device(
             &wgpu::DeviceDescriptor {
@@ -45,6 +54,7 @@ impl<'a> State<'a> {
             },
             None,
         ).await.unwrap();
+        debug!("Tuple (device, queue) has been created using adapter request");
 
         // Configuration for the surface
         let surface_caps = surface.get_capabilities(&adapter);
@@ -62,6 +72,8 @@ impl<'a> State<'a> {
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
+        debug!("Available surface formats: {:?}", surface_format);
+        debug!("Surface configuration has been created");
 
         let mut clear_color = wgpu::Color {
             r: 0.1,
@@ -69,7 +81,56 @@ impl<'a> State<'a> {
             b: 0.3,
             a: 1.0,
         };
+        debug!("Set clear colour to {:?}", clear_color);
 
+        let shader = device.create_shader_module(wgpu::include_wgsl!("shader.wgsl"));
+        debug!("Shader created with reference to shader.wgsl");
+        let render_pipeline_layout = device.create_pipeline_layout(&PipelineLayoutDescriptor {
+            label: Some("Render Pipeline Layout"),
+            bind_group_layouts: &[],
+            push_constant_ranges: &[],
+        });
+        debug!("{} has been created", "Render pipeline layout");
+        let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
+            label: Some("Render Pipeline Layout"),
+            layout: Some(&render_pipeline_layout),
+            vertex: VertexState {
+                module: &shader,
+                entry_point: "vs_main",
+                buffers: &[],
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+            },
+            fragment: Some(FragmentState {
+                module: &shader,
+                entry_point: "fs_main",
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: config.format,
+                    blend: Some(wgpu::BlendState::REPLACE),
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: wgpu::PrimitiveState {
+                topology: wgpu::PrimitiveTopology::TriangleList,
+                strip_index_format: None,
+                front_face: wgpu::FrontFace::Ccw,
+                cull_mode: Some(wgpu::Face::Back),
+                polygon_mode: Fill,
+                unclipped_depth: false,
+                conservative: false,
+            },
+            depth_stencil: None,
+            multisample: MultisampleState {
+                count: 1,
+                mask: !0,
+                alpha_to_coverage_enabled: false,
+            },
+            multiview: None,
+            cache: None,
+        });
+        debug!("Render pipeline has been created: Render vertex pipeline and Render fragment pipeline");
+
+        debug!("Finished creating the State");
         Self {
             window,
             surface,
@@ -77,7 +138,8 @@ impl<'a> State<'a> {
             queue,
             config,
             size,
-            clear_color
+            clear_color,
+            render_pipeline
         }
     }
 
@@ -127,7 +189,7 @@ impl<'a> State<'a> {
         let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render Encoder")});
 
         {
-            let _render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("Render Pass"),
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
@@ -141,6 +203,9 @@ impl<'a> State<'a> {
                 occlusion_query_set: None,
                 timestamp_writes: None,
             });
+
+            render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.draw(0..3, 0..1);
         }
 
         self.queue.submit(std::iter::once(encoder.finish()));
