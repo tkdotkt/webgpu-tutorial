@@ -1,11 +1,11 @@
+use crate::state;
+use crate::{state::*, vertex::*};
 use winit::{
     event::*,
     event_loop::EventLoop,
     keyboard::{KeyCode, PhysicalKey},
     window::WindowBuilder,
 };
-use crate::{vertex::*, state::*};
-use crate::state;
 
 pub async fn run() {
     env_logger::init();
@@ -27,11 +27,11 @@ pub async fn run() {
                             WindowEvent::CloseRequested
                             | WindowEvent::KeyboardInput {
                                 event:
-                                KeyEvent {
-                                    state: ElementState::Pressed,
-                                    physical_key: PhysicalKey::Code(KeyCode::Escape),
-                                    ..
-                                },
+                                    KeyEvent {
+                                        state: ElementState::Pressed,
+                                        physical_key: PhysicalKey::Code(KeyCode::Escape),
+                                        ..
+                                    },
                                 ..
                             } => control_flow.exit(),
                             WindowEvent::Resized(physical_size) => {

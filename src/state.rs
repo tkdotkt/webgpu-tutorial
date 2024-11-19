@@ -1,11 +1,14 @@
+use crate::vertex::Vertex;
+use crate::{INDICES, VERTICES};
+use log::*;
 use wgpu::util::DeviceExt;
-use wgpu::{VertexState, FragmentState, PipelineLayoutDescriptor, RenderPipeline, RenderPipelineDescriptor, MultisampleState};
 use wgpu::PolygonMode::Fill;
+use wgpu::{
+    FragmentState, MultisampleState, PipelineLayoutDescriptor, RenderPipeline,
+    RenderPipelineDescriptor, VertexState,
+};
 use winit::event::WindowEvent;
 use winit::window::Window;
-use log::*;
-use crate::{INDICES, VERTICES};
-use crate::vertex::Vertex;
 
 struct SimpleLogger;
 
@@ -55,29 +58,35 @@ impl<'a> State<'a> {
         println!("[DEBUG]    || Surface has been created");
 
         // Handle for graphics card
-        let adapter = instance.request_adapter(
-            &wgpu::RequestAdapterOptions {
+        let adapter = instance
+            .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::default(),
                 compatible_surface: Some(&surface),
                 force_fallback_adapter: false,
-            },
-        ).await.unwrap();
+            })
+            .await
+            .unwrap();
         println!("[DEBUG]    || Adapter has been created");
 
-        let (device, queue) = adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                label: None,
-                memory_hints: Default::default()
-            },
-            None,
-        ).await.unwrap();
+        let (device, queue) = adapter
+            .request_device(
+                &wgpu::DeviceDescriptor {
+                    required_features: wgpu::Features::empty(),
+                    required_limits: wgpu::Limits::default(),
+                    label: None,
+                    memory_hints: Default::default(),
+                },
+                None,
+            )
+            .await
+            .unwrap();
         println!("[DEBUG]    || Tuple (device, queue) has been created using adapter request");
 
         // Configuration for the surface
         let surface_caps = surface.get_capabilities(&adapter);
-        let surface_format = surface_caps.formats.iter()
+        let surface_format = surface_caps
+            .formats
+            .iter()
             .find(|f| f.is_srgb())
             .copied()
             .unwrap_or(surface_caps.formats[0]);
@@ -91,7 +100,10 @@ impl<'a> State<'a> {
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
         };
-        println!("[DEBUG]    || Available surface formats: {:?}", surface_format);
+        println!(
+            "[DEBUG]    || Available surface formats: {:?}",
+            surface_format
+        );
         println!("[DEBUG]    || Surface configuration has been created");
 
         let clear_color = wgpu::Color {
@@ -109,7 +121,10 @@ impl<'a> State<'a> {
             bind_group_layouts: &[],
             push_constant_ranges: &[],
         });
-        println!("[DEBUG]    || {} has been created", "Render pipeline layout");
+        println!(
+            "[DEBUG]    || {} has been created",
+            "Render pipeline layout"
+        );
         let render_pipeline = device.create_render_pipeline(&RenderPipelineDescriptor {
             label: Some("Render Pipeline Layout"),
             layout: Some(&render_pipeline_layout),
@@ -149,30 +164,31 @@ impl<'a> State<'a> {
         });
         println!("[DEBUG]    || Render pipeline has been created: Render vertex pipeline and Render fragment pipeline");
 
-        let vertex_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Vertex Buffer"),
-                contents: bytemuck::cast_slice(VERTICES),
-                usage: wgpu::BufferUsages::VERTEX,
-            }
-        );
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Vertex Buffer"),
+            contents: bytemuck::cast_slice(VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
         println!("[DEBUG]    || Vertex Buffer has been created");
 
-        let index_buffer = device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("Index Buffer"),
-                contents: bytemuck::cast_slice(INDICES),
-                usage: wgpu::BufferUsages::INDEX,
-            }
-        );
+        let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Index Buffer"),
+            contents: bytemuck::cast_slice(INDICES),
+            usage: wgpu::BufferUsages::INDEX,
+        });
         println!("[DEBUG]    || Index Buffer has been created");
 
-
         let num_vertices = VERTICES.len() as u32;
-        println!("[DEBUG]    || Number of vertices is equal to {}", num_vertices);
+        println!(
+            "[DEBUG]    || Number of vertices is equal to {}",
+            num_vertices
+        );
 
         let num_indices = INDICES.len() as u32;
-        println!("[DEBUG]    || Number of indices is equal to {}", num_indices);
+        println!(
+            "[DEBUG]    || Number of indices is equal to {}",
+            num_indices
+        );
 
         println!("[DEBUG]    || Finished creating the State");
         Self {
@@ -210,16 +226,17 @@ impl<'a> State<'a> {
                 self.clear_color = wgpu::Color {
                     r: position.x as f64 / self.size.width as f64,
                     g: position.y as f64 / self.size.height as f64,
-                    b: (position.x + position.y) as f64 / (self.size.height + self.size.width) as f64,
+                    b: (position.x + position.y) as f64
+                        / (self.size.height + self.size.width) as f64,
                     a: 1.0,
                 };
                 true
-            },
+            }
             WindowEvent::KeyboardInput { event, .. } => {
                 println!("{:?} has been pressed!", event.physical_key);
                 true
-            },
-            _ => false
+            }
+            _ => false,
         }
     }
 
@@ -230,9 +247,15 @@ impl<'a> State<'a> {
         let output = self.surface.get_current_texture()?;
 
         // Creates a texture view to control rendering code with texture
-        let view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let view = output
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
 
-        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("Render Encoder") });
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Render Encoder"),
+            });
 
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
