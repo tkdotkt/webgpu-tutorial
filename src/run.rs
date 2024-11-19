@@ -4,14 +4,15 @@ use winit::{
     keyboard::{KeyCode, PhysicalKey},
     window::WindowBuilder,
 };
-use crate::State;
+use crate::{vertex::*, state::*};
+use crate::state;
 
 pub async fn run() {
     env_logger::init();
     let event_loop = EventLoop::new().unwrap();
     let window = WindowBuilder::new().build(&event_loop).unwrap();
 
-    let mut state = State::new(&window).await;
+    let mut state = state::State::new(&window).await;
     let mut surface_configured = false;
 
     event_loop

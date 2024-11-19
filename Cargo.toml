@@ -9,3 +9,4 @@ env_logger = "*"
 log = "0.4"
 wgpu = "*"
 pollster = "*"
+bytemuck = { version = "*", features = [ "derive" ] }
